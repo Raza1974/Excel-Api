@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, ChangeEvent, KeyboardEvent } from 'react'
+import { useState, ChangeEvent } from 'react'
 import { read, utils, writeFile } from 'xlsx'
 import { Button } from "./components/ui/button"
 import { Input } from "./components/ui/input"
@@ -26,7 +26,7 @@ export default function ProfessionalExcelImport() {
       try {
         const data = await readExcelFile(file)
         setData(data)
-      } catch (err) {
+      } catch (error) {
         setError('Failed to read the Excel file. Please ensure it is a valid Excel file.')
         setData([])
       } finally {
@@ -47,7 +47,7 @@ export default function ProfessionalExcelImport() {
             const ws = wb.Sheets[wsname]
             const data = utils.sheet_to_json(ws, { header: 1 }) as string[][]
             resolve(data)
-          } catch (err) {
+          } catch (error) {
             reject('Failed to parse the Excel file. Please ensure it is a valid Excel file.')
           }
         }
@@ -64,13 +64,14 @@ export default function ProfessionalExcelImport() {
   }
 
   const handleCellEdit = (row: number, col: number, value: string) => {
-    const newData = [...data]
-    newData[row][col] = value
+    const newData = data.map((rowData, rowIndex) =>
+      rowIndex === row ? rowData.map((cell, cellIndex) => cellIndex === col ? value : cell) : rowData
+    )
     setData(newData)
     setEditCell(null)
   }
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, row: number, col: number) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, row: number, col: number) => {
     if (e.key === 'Enter') {
       handleCellEdit(row, col, (e.target as HTMLInputElement).value)
     }
@@ -164,14 +165,14 @@ export default function ProfessionalExcelImport() {
                         <TableCell
                           key={cellIndex}
                           className="border-b border-blue-200 dark:border-blue-900"
-                          onClick={() => setEditCell({ row: rowIndex + 1, col: cellIndex })}
+                          onClick={() => setEditCell({ row: rowIndex, col: cellIndex })}
                         >
-                          {editCell?.row === rowIndex + 1 && editCell?.col === cellIndex ? (
+                          {editCell?.row === rowIndex && editCell?.col === cellIndex ? (
                             <Input
                               autoFocus
                               defaultValue={cell}
-                              onBlur={(e) => handleCellEdit(rowIndex + 1, cellIndex, e.target.value)}
-                              onKeyDown={(e) => handleKeyDown(e, rowIndex + 1, cellIndex)}
+                              onBlur={(e) => handleCellEdit(rowIndex, cellIndex, e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, rowIndex, cellIndex)}
                               className="w-full p-0 border-none bg-transparent"
                             />
                           ) : (
